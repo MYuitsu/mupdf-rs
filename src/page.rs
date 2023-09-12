@@ -64,6 +64,21 @@ impl Page {
         Ok(svg)
     }
 
+    pub fn to_svg_text_as_text(&self, ctm: &Matrix) -> Result<String, Error> {
+        let mut buf = unsafe {
+            let inner = ffi_try!(mupdf_page_to_svg_text_as_text(
+                context(),
+                self.inner,
+                ctm.into(),
+                ptr::null_mut()
+            ));
+            Buffer::from_raw(inner)
+        };
+        let mut svg = String::new();
+        buf.read_to_string(&mut svg)?;
+        Ok(svg)
+    }
+
     pub fn to_svg_with_cookie(&self, ctm: &Matrix, cookie: &Cookie) -> Result<String, Error> {
         let mut buf = unsafe {
             let inner = ffi_try!(mupdf_page_to_svg(
