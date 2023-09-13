@@ -978,6 +978,34 @@ fz_buffer *mupdf_page_to_xml(fz_context *ctx, fz_page *page, mupdf_error_t **err
     return buf;
 }
 
+fz_buffer *mupdf_page_to_json(fz_context *ctx, fz_page *page, mupdf_error_t **errptr)
+{
+    fz_buffer *buf = NULL;
+    fz_output *out = NULL;
+    fz_stext_page *text = NULL;
+    fz_var(text);
+    fz_var(buf);
+    fz_var(out);
+    fz_try(ctx)
+    {
+        text = fz_new_stext_page_from_page(ctx, page, NULL);
+        buf = fz_new_buffer(ctx, 8192);
+        out = fz_new_output_with_buffer(ctx, buf);
+        fz_print_stext_page_as_json(ctx, out, text, 1);
+        fz_close_output(ctx, out);
+    }
+    fz_always(ctx)
+    {
+        fz_drop_output(ctx, out);
+        fz_drop_stext_page(ctx, text);
+    }
+    fz_catch(ctx)
+    {
+        mupdf_save_error(ctx, errptr);
+    }
+    return buf;
+}
+
 fz_buffer *mupdf_page_to_text(fz_context *ctx, fz_page *page, mupdf_error_t **errptr)
 {
     fz_buffer *buf = NULL;
