@@ -270,6 +270,16 @@ impl Page {
         Ok(out)
     }
 
+    pub fn to_xml_by_device(&self,cookie: &Cookie) -> Result<String, Error> {
+        let mut buf = unsafe {
+            let inner = ffi_try!(mupdf_page_to_xml_by_device(context(), self.inner,cookie.inner));
+            Buffer::from_raw(inner)
+        };
+        let mut out = String::new();
+        buf.read_to_string(&mut out)?;
+        Ok(out)
+    }
+
     pub fn to_json(&self) -> Result<String, Error> {
         let mut buf = unsafe {
             let inner = ffi_try!(mupdf_page_to_json(context(), self.inner));

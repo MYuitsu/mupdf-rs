@@ -978,6 +978,41 @@ fz_buffer *mupdf_page_to_xml(fz_context *ctx, fz_page *page, mupdf_error_t **err
     return buf;
 }
 
+fz_buffer *mupdf_page_to_xml_by_device(fz_context *ctx, fz_page *page, fz_matrix ctm, fz_cookie *cookie, mupdf_error_t **errptr)
+{
+    fz_rect mediabox = fz_bound_page(ctx, page);
+    fz_device *dev = NULL;
+    fz_buffer *buf = NULL;
+    fz_output *out = NULL;
+    fz_var(out);
+    fz_var(dev);
+    fz_var(buf);
+    fz_rect tbounds = mediabox;
+    tbounds = fz_transform_rect(tbounds, ctm);
+    fz_try(ctx)
+    {
+        buf = fz_new_buffer(ctx, 1024);
+        out = fz_new_output_with_buffer(ctx, buf);
+        fz_write_printf(ctx, out, "<page mediabox=\"%g %g %g %g\">\n",
+					tmediabox.x0, tmediabox.y0, tmediabox.x1, tmediabox.y1);
+        dev = fz_new_svg_device(ctx, out);
+        apply_kill_switch(dev);
+        fz_run_page(ctx, page, dev, ctm, cookie);
+        fz_write_printf(ctx, out, "</page>\n");
+        fz_close_device(ctx, dev);
+    }
+    fz_always(ctx)
+    {
+        fz_drop_device(ctx, dev);
+        fz_drop_output(ctx, out);
+    }
+    fz_catch(ctx)
+    {
+        mupdf_save_error(ctx, errptr);
+    }
+    return buf;
+}
+
 fz_buffer *mupdf_page_to_json(fz_context *ctx, fz_page *page, mupdf_error_t **errptr)
 {
     fz_buffer *buf = NULL;
