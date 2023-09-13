@@ -994,9 +994,9 @@ fz_buffer *mupdf_page_to_xml_by_device(fz_context *ctx, fz_page *page, fz_matrix
         buf = fz_new_buffer(ctx, 1024);
         out = fz_new_output_with_buffer(ctx, buf);
         fz_write_printf(ctx, out, "<page mediabox=\"%g %g %g %g\">\n",
-					tmediabox.x0, tmediabox.y0, tmediabox.x1, tmediabox.y1);
-        dev = fz_new_svg_device(ctx, out);
-        apply_kill_switch(dev);
+					mediabox.x0, mediabox.y0, mediabox.x1, mediabox.y1);
+        dev = fz_new_xmltext_device(ctx, out);
+//        apply_kill_switch(dev);
         fz_run_page(ctx, page, dev, ctm, cookie);
         fz_write_printf(ctx, out, "</page>\n");
         fz_close_device(ctx, dev);

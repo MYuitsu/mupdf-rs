@@ -3,3 +3,5 @@ Cargo.lock
 **/*.rs.bk
 /build
 tests/output/*.png
+/.idea
+/cmake-build-debug

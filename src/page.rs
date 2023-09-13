@@ -270,9 +270,9 @@ impl Page {
         Ok(out)
     }
 
-    pub fn to_xml_by_device(&self,cookie: &Cookie) -> Result<String, Error> {
+    pub fn to_xml_by_device(&self, ctm: &Matrix, cookie: &Cookie) -> Result<String, Error> {
         let mut buf = unsafe {
-            let inner = ffi_try!(mupdf_page_to_xml_by_device(context(), self.inner,cookie.inner));
+            let inner = ffi_try!(mupdf_page_to_xml_by_device(context(), self.inner, ctm.into(), cookie.inner));
             Buffer::from_raw(inner)
         };
         let mut out = String::new();
