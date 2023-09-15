@@ -1043,6 +1043,37 @@ fz_new_stext_page_from_page_full(fz_context *ctx, fz_page *page, const fz_stext_
 
     return text;
 }
+fz_stext_page *
+fz_new_stext_page_from_page_annots_widgets(fz_context *ctx, fz_page *page, const fz_stext_options *options)
+{
+    fz_stext_page *text;
+    fz_device *dev = NULL;
+
+    fz_var(dev);
+
+    if (page == NULL)
+        return NULL;
+
+    text = fz_new_stext_page(ctx, fz_bound_page(ctx, page));
+    fz_try(ctx)
+            {
+                dev = fz_new_stext_device(ctx, text, options);
+                fz_run_page_annots(ctx, page, dev, fz_identity, NULL);
+                fz_run_page_widgets(ctx, page, dev, fz_identity, NULL);
+                fz_close_device(ctx, dev);
+            }
+    fz_always(ctx)
+        {
+            fz_drop_device(ctx, dev);
+        }
+    fz_catch(ctx)
+    {
+        fz_drop_stext_page(ctx, text);
+        fz_rethrow(ctx);
+    }
+
+    return text;
+}
 
 
 //void
@@ -1150,6 +1181,34 @@ fz_buffer *mupdf_page_to_json_full(fz_context *ctx, fz_page *page, mupdf_error_t
         fz_drop_output(ctx, out);
         fz_drop_stext_page(ctx, text);
     }
+    fz_catch(ctx)
+    {
+        mupdf_save_error(ctx, errptr);
+    }
+    return buf;
+}
+
+fz_buffer *mupdf_page_to_json_annots_widgets(fz_context *ctx, fz_page *page, mupdf_error_t **errptr)
+{
+    fz_buffer *buf = NULL;
+    fz_output *out = NULL;
+    fz_stext_page *text = NULL;
+    fz_var(text);
+    fz_var(buf);
+    fz_var(out);
+    fz_try(ctx)
+            {
+                text = fz_new_stext_page_from_page_annots_widgets(ctx, page, NULL);
+                buf = fz_new_buffer(ctx, 8192);
+                out = fz_new_output_with_buffer(ctx, buf);
+                fz_print_stext_page_as_json(ctx, out, text, 1);
+                fz_close_output(ctx, out);
+            }
+    fz_always(ctx)
+        {
+            fz_drop_output(ctx, out);
+            fz_drop_stext_page(ctx, text);
+        }
     fz_catch(ctx)
     {
         mupdf_save_error(ctx, errptr);

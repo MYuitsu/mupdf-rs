@@ -299,6 +299,15 @@ impl Page {
         buf.read_to_string(&mut out)?;
         Ok(out)
     }
+    pub fn to_json_annots_widgets(&self) -> Result<String, Error> {
+        let mut buf = unsafe {
+            let inner = ffi_try!(mupdf_page_to_json_annots_widgets(context(), self.inner));
+            Buffer::from_raw(inner)
+        };
+        let mut out = String::new();
+        buf.read_to_string(&mut out)?;
+        Ok(out)
+    }
 
     pub fn to_text(&self) -> Result<String, Error> {
         let mut buf = unsafe {
