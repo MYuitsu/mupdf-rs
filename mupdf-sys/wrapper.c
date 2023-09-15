@@ -1013,7 +1013,123 @@ fz_buffer *mupdf_page_to_xml_by_device(fz_context *ctx, fz_page *page, fz_matrix
     return buf;
 }
 
-fz_buffer *mupdf_page_to_json(fz_context *ctx, fz_page *page, mupdf_error_t **errptr)
+fz_stext_page *
+fz_new_stext_page_from_page_full(fz_context *ctx, fz_page *page, const fz_stext_options *options)
+{
+    fz_stext_page *text;
+    fz_device *dev = NULL;
+
+    fz_var(dev);
+
+    if (page == NULL)
+        return NULL;
+
+    text = fz_new_stext_page(ctx, fz_bound_page(ctx, page));
+    fz_try(ctx)
+            {
+                dev = fz_new_stext_device(ctx, text, options);
+                fz_run_page(ctx, page, dev, fz_identity, NULL);
+                fz_close_device(ctx, dev);
+            }
+    fz_always(ctx)
+        {
+            fz_drop_device(ctx, dev);
+        }
+    fz_catch(ctx)
+    {
+        fz_drop_stext_page(ctx, text);
+        fz_rethrow(ctx);
+    }
+
+    return text;
+}
+
+
+//void
+//fz_print_stext_page_as_json_full(fz_context *ctx, fz_output *out, fz_stext_page *page, float scale)
+//{
+//    fz_stext_block *block;
+//    fz_stext_line *line;
+//    fz_stext_char *ch;
+//
+//    fz_write_printf(ctx, out, "{%q:[", "blocks");
+//
+//    for (block = page->first_block; block; block = block->next)
+//    {
+//        if (block != page->first_block)
+//            fz_write_string(ctx, out, ",");
+//        switch (block->type)
+//        {
+//            case FZ_STEXT_BLOCK_TEXT:
+//                fz_write_printf(ctx, out, "{%q:%q,", "type", "text");
+//                fz_write_printf(ctx, out, "%q:{", "bbox");
+//                fz_write_printf(ctx, out, "%q:%d,", "x", (int)(block->bbox.x0 * scale));
+//                fz_write_printf(ctx, out, "%q:%d,", "y", (int)(block->bbox.y0 * scale));
+//                fz_write_printf(ctx, out, "%q:%d,", "w", (int)((block->bbox.x1 - block->bbox.x0) * scale));
+//                fz_write_printf(ctx, out, "%q:%d},", "h", (int)((block->bbox.y1 - block->bbox.y0) * scale));
+//                fz_write_printf(ctx, out, "%q:[", "lines");
+//
+//                for (line = block->u.t.first_line; line; line = line->next)
+//                {
+//                    if (line != block->u.t.first_line)
+//                        fz_write_string(ctx, out, ",");
+//                    fz_write_printf(ctx, out, "{%q:%d,", "wmode", line->wmode);
+//                    fz_write_printf(ctx, out, "%q:{", "bbox");
+//                    fz_write_printf(ctx, out, "%q:%d,", "x", (int)(line->bbox.x0 * scale));
+//                    fz_write_printf(ctx, out, "%q:%d,", "y", (int)(line->bbox.y0 * scale));
+//                    fz_write_printf(ctx, out, "%q:%d,", "w", (int)((line->bbox.x1 - line->bbox.x0) * scale));
+//                    fz_write_printf(ctx, out, "%q:%d},", "h", (int)((line->bbox.y1 - line->bbox.y0) * scale));
+//
+//                    /* Since we force preserve-spans, the first char has the style for the entire line. */
+//                    if (line->first_char)
+//                    {
+//                        fz_font *font = line->first_char->font;
+//                        char *font_family = "sans-serif";
+//                        char *font_weight = "normal";
+//                        char *font_style = "normal";
+//                        if (fz_font_is_monospaced(ctx, font)) font_family = "monospace";
+//                        else if (fz_font_is_serif(ctx, font)) font_family = "serif";
+//                        if (fz_font_is_bold(ctx, font)) font_weight = "bold";
+//                        if (fz_font_is_italic(ctx, font)) font_style = "italic";
+//                        fz_write_printf(ctx, out, "%q:{", "font");
+//                        fz_write_printf(ctx, out, "%q:%q,", "name", fz_font_name(ctx, font));
+//                        fz_write_printf(ctx, out, "%q:%q,", "family", font_family);
+//                        fz_write_printf(ctx, out, "%q:%q,", "weight", font_weight);
+//                        fz_write_printf(ctx, out, "%q:%q,", "style", font_style);
+//                        fz_write_printf(ctx, out, "%q:%d},", "size", (int)(line->first_char->size * scale));
+//                        fz_write_printf(ctx, out, "%q:%d,", "x", (int)(line->first_char->origin.x * scale));
+//                        fz_write_printf(ctx, out, "%q:%d,", "y", (int)(line->first_char->origin.y * scale));
+//                    }
+//
+//                    fz_write_printf(ctx, out, "%q:\"", "text");
+//                    for (ch = line->first_char; ch; ch = ch->next)
+//                    {
+//                        if (ch->c == '"' || ch->c == '\\')
+//                            fz_write_printf(ctx, out, "\\%c", ch->c);
+//                        else if (ch->c < 32)
+//                            fz_write_printf(ctx, out, "\\u%04x", ch->c);
+//                        else
+//                            fz_write_printf(ctx, out, "%C", ch->c);
+//                    }
+//                    fz_write_printf(ctx, out, "\"}");
+//                }
+//                fz_write_string(ctx, out, "]}");
+//                break;
+//
+//            case FZ_STEXT_BLOCK_IMAGE:
+//                fz_write_printf(ctx, out, "{%q:%q,", "type", "image");
+//                fz_write_printf(ctx, out, "%q:{", "bbox");
+//                fz_write_printf(ctx, out, "%q:%d,", "x", (int)(block->bbox.x0 * scale));
+//                fz_write_printf(ctx, out, "%q:%d,", "y", (int)(block->bbox.y0 * scale));
+//                fz_write_printf(ctx, out, "%q:%d,", "w", (int)((block->bbox.x1 - block->bbox.x0) * scale));
+//                fz_write_printf(ctx, out, "%q:%d}}", "h", (int)((block->bbox.y1 - block->bbox.y0) * scale));
+//                break;
+//        }
+//    }
+//    fz_write_string(ctx, out, "]}");
+//}
+
+fz_buffer *mupdf_page_to_json_full(fz_context *ctx, fz_page *page, mupdf_error_t **errptr)
 {
     fz_buffer *buf = NULL;
     fz_output *out = NULL;
@@ -1023,7 +1139,7 @@ fz_buffer *mupdf_page_to_json(fz_context *ctx, fz_page *page, mupdf_error_t **er
     fz_var(out);
     fz_try(ctx)
     {
-        text = fz_new_stext_page_from_page(ctx, page, NULL);
+        text = fz_new_stext_page_from_page_full(ctx, page, NULL);
         buf = fz_new_buffer(ctx, 8192);
         out = fz_new_output_with_buffer(ctx, buf);
         fz_print_stext_page_as_json(ctx, out, text, 1);
@@ -1034,6 +1150,34 @@ fz_buffer *mupdf_page_to_json(fz_context *ctx, fz_page *page, mupdf_error_t **er
         fz_drop_output(ctx, out);
         fz_drop_stext_page(ctx, text);
     }
+    fz_catch(ctx)
+    {
+        mupdf_save_error(ctx, errptr);
+    }
+    return buf;
+}
+
+fz_buffer *mupdf_page_to_json(fz_context *ctx, fz_page *page, mupdf_error_t **errptr)
+{
+    fz_buffer *buf = NULL;
+    fz_output *out = NULL;
+    fz_stext_page *text = NULL;
+    fz_var(text);
+    fz_var(buf);
+    fz_var(out);
+    fz_try(ctx)
+            {
+                text = fz_new_stext_page_from_page(ctx, page, NULL);
+                buf = fz_new_buffer(ctx, 8192);
+                out = fz_new_output_with_buffer(ctx, buf);
+                fz_print_stext_page_as_json(ctx, out, text, 1);
+                fz_close_output(ctx, out);
+            }
+    fz_always(ctx)
+        {
+            fz_drop_output(ctx, out);
+            fz_drop_stext_page(ctx, text);
+        }
     fz_catch(ctx)
     {
         mupdf_save_error(ctx, errptr);
